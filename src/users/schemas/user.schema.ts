@@ -19,6 +19,9 @@ export class User {
 
   @Prop({ default: '' })
   bio: string;
+
+  @Prop({ default: 'client' })
+  role: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
@@ -33,6 +36,7 @@ UserSchema.set('toJSON', {
       name: r.name,
       email: r.email,
       password: r.password,
+      role: r.role,
     };
   },
 });

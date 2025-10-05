@@ -16,6 +16,7 @@ export interface IUser {
   email: string;
   avatarUrl?: string;
   bio?: string;
+  role?: string;
 }
 
 export interface IUpdateUserDto {

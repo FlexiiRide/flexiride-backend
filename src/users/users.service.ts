@@ -17,7 +17,13 @@ export class UsersService {
     return this.userModel.findOne({ email: email.toLowerCase() }).select('+password').exec();
   }
 
-  async createUser(data: { name: string; email: string; password: string; avatarUrl?: string }) {
+  async createUser(data: {
+    name: string;
+    email: string;
+    password: string;
+    avatarUrl?: string;
+    role?: string;
+  }) {
     const existing = await this.findByEmail(data.email);
     if (existing) throw new ConflictException('Email already registered');
 
@@ -28,6 +34,7 @@ export class UsersService {
       password: hash,
       avatarUrl: data.avatarUrl ?? '',
       bio: '',
+      role: data.role ?? 'client',
     });
     return created.toJSON(); // applies transform
   }
@@ -41,6 +48,7 @@ export class UsersService {
       email: user.email,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
+      role: user.role,
     };
   }
 
@@ -60,6 +68,7 @@ export class UsersService {
       email: user.email,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
+      role: user.role,
     };
   }
 

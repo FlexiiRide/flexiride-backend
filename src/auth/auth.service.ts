@@ -16,6 +16,7 @@ interface UserDocument {
   password: string;
   avatarUrl?: string;
   bio?: string;
+  role?: string;
   createdAt?: Date;
   updatedAt?: Date;
   __v?: number;
@@ -36,6 +37,7 @@ export class AuthService {
     email: string;
     avatarUrl: string;
     bio: string;
+    role?: string;
   } {
     return {
       id: user.id || user._id.toString(),
@@ -43,6 +45,7 @@ export class AuthService {
       email: user.email,
       avatarUrl: user.avatarUrl || '',
       bio: user.bio || '',
+      role: user.role,
     };
   }
 
@@ -54,7 +57,7 @@ export class AuthService {
     });
   }
 
-  async register(data: { name: string; email: string; password: string }) {
+  async register(data: { name: string; email: string; password: string; role: string }) {
     const created = (await this.users.createUser(data)) as UserDocument;
     return {
       user: this.toPublicUser(created),
