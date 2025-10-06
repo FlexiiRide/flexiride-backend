@@ -27,6 +27,13 @@ import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { cloudinaryStorage } from '../cloudinary/cloudinary.storage';
 
+interface AuthenticatedRequest extends Request {
+  user: {
+    userId: string;
+    email: string;
+  };
+}
+
 @ApiTags('vehicles')
 @Controller('vehicles')
 export class VehiclesController {
@@ -68,20 +75,25 @@ export class VehiclesController {
   async createVehicle(
     @Body() data: CreateVehicleDto,
     @UploadedFiles() files: Express.Multer.File[],
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     // Parse JSON strings from multipart form data
-    if (typeof data.location === 'string') {
-      data.location = JSON.parse(data.location);
-    }
-    if (typeof data.availableRanges === 'string') {
-      data.availableRanges = JSON.parse(data.availableRanges);
-    }
+    const parsedData: CreateVehicleDto = {
+      ...data,
+      location:
+        typeof data.location === 'string'
+          ? (JSON.parse(data.location) as CreateVehicleDto['location'])
+          : data.location,
+      availableRanges:
+        typeof data.availableRanges === 'string'
+          ? (JSON.parse(data.availableRanges) as CreateVehicleDto['availableRanges'])
+          : data.availableRanges,
+    };
 
     const imagePaths = files?.map((f) => f.path) || [];
     const ownerId = req.user.userId;
 
-    return this.vehiclesService.createVehicle(ownerId, data, imagePaths);
+    return this.vehiclesService.createVehicle(ownerId, parsedData, imagePaths);
   }
 
   @Get()
@@ -132,27 +144,33 @@ export class VehiclesController {
     @Param('id') id: string,
     @Body() data: UpdateVehicleDto,
     @UploadedFiles() files: Express.Multer.File[],
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     // Parse JSON strings from multipart form data if they exist
+    const parsedData: UpdateVehicleDto = {
+      ...data,
+    };
+
     if (data.location && typeof data.location === 'string') {
-      data.location = JSON.parse(data.location);
+      parsedData.location = JSON.parse(data.location) as UpdateVehicleDto['location'];
     }
     if (data.availableRanges && typeof data.availableRanges === 'string') {
-      data.availableRanges = JSON.parse(data.availableRanges);
+      parsedData.availableRanges = JSON.parse(
+        data.availableRanges,
+      ) as UpdateVehicleDto['availableRanges'];
     }
 
     const imagePaths = files?.map((f) => f.path) || [];
     const ownerId = req.user.userId;
 
-    return this.vehiclesService.updateVehicle(id, ownerId, data, imagePaths);
+    return this.vehiclesService.updateVehicle(id, ownerId, parsedData, imagePaths);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Delete vehicle' })
-  async deleteVehicle(@Param('id') id: string, @Req() req: any) {
+  async deleteVehicle(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const ownerId = req.user.userId;
     await this.vehiclesService.deleteVehicle(id, ownerId);
     return { message: 'Vehicle deleted successfully' };
@@ -170,7 +188,11 @@ export class VehiclesController {
       },
     },
   })
-  async removeImage(@Param('id') id: string, @Body('imageUrl') imageUrl: string, @Req() req: any) {
+  async removeImage(
+    @Param('id') id: string,
+    @Body('imageUrl') imageUrl: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const ownerId = req.user.userId;
     return this.vehiclesService.removeImageFromVehicle(id, ownerId, imageUrl);
   }
@@ -179,7 +201,7 @@ export class VehiclesController {
   @Get('owner/my-vehicles')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get all vehicles owned by current user' })
-  async getMyVehicles(@Req() req: any) {
+  async getMyVehicles(@Req() req: AuthenticatedRequest) {
     const ownerId = req.user.userId;
     return this.vehiclesService.getVehiclesByOwner(ownerId);
   }

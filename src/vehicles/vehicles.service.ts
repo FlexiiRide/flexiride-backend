@@ -6,6 +6,12 @@ import { IVehicle } from './vehicle.types';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 
+interface VehicleQuery {
+  ownerId?: Types.ObjectId;
+  type?: 'car' | 'bike';
+  status?: 'active' | 'inactive';
+}
+
 @Injectable()
 export class VehiclesService {
   constructor(@InjectModel(Vehicle.name) private vehicleModel: Model<VehicleDocument>) {}
@@ -27,7 +33,7 @@ export class VehiclesService {
       images: images,
       status: 'active',
     });
-    return created.toJSON();
+    return this.toIVehicle(created);
   }
 
   async getAllVehicles(filters?: {
@@ -35,7 +41,7 @@ export class VehiclesService {
     type?: 'car' | 'bike';
     status?: 'active' | 'inactive';
   }): Promise<IVehicle[]> {
-    const query: any = {};
+    const query: VehicleQuery = {};
 
     if (filters?.ownerId) {
       query.ownerId = new Types.ObjectId(filters.ownerId);
@@ -48,7 +54,7 @@ export class VehiclesService {
     }
 
     const vehicles = await this.vehicleModel.find(query).sort({ createdAt: -1 }).exec();
-    return vehicles.map((v) => v.toJSON());
+    return vehicles.map((v) => this.toIVehicle(v));
   }
 
   async getVehicleById(id: string): Promise<IVehicle> {
@@ -60,7 +66,7 @@ export class VehiclesService {
     if (!vehicle) {
       throw new NotFoundException('Vehicle not found');
     }
-    return vehicle.toJSON();
+    return this.toIVehicle(vehicle);
   }
 
   async updateVehicle(
@@ -83,7 +89,7 @@ export class VehiclesService {
       throw new ForbiddenException('You do not own this vehicle');
     }
 
-    const updateData: any = { ...data };
+    const updateData: Partial<Vehicle> = { ...data };
 
     // If new images are provided, append to existing
     if (newImages && newImages.length > 0) {
@@ -96,7 +102,7 @@ export class VehiclesService {
       throw new NotFoundException('Vehicle not found');
     }
 
-    return updated.toJSON();
+    return this.toIVehicle(updated);
   }
 
   async deleteVehicle(id: string, ownerId: string): Promise<void> {
@@ -122,7 +128,7 @@ export class VehiclesService {
       .find({ ownerId: new Types.ObjectId(ownerId) })
       .sort({ createdAt: -1 })
       .exec();
-    return vehicles.map((v) => v.toJSON());
+    return vehicles.map((v) => this.toIVehicle(v));
   }
 
   async removeImageFromVehicle(
@@ -154,7 +160,7 @@ export class VehiclesService {
       throw new NotFoundException('Vehicle not found');
     }
 
-    return updated.toJSON();
+    return this.toIVehicle(updated);
   }
 
   private toIVehicle(vehicle: VehicleDocument): IVehicle {

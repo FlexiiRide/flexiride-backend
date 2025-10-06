@@ -56,6 +56,9 @@ export class Vehicle {
 
   @Prop({ default: 'active', enum: ['active', 'inactive'] })
   status: string;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const VehicleSchema = SchemaFactory.createForClass(Vehicle);
@@ -69,19 +72,18 @@ VehicleSchema.set('toJSON', {
   virtuals: true,
   versionKey: false,
   transform: (_doc, ret) => {
-    const r = ret as Vehicle & { _id: Types.ObjectId };
     return {
-      id: r._id.toString(),
-      ownerId: r.ownerId.toString(),
-      title: r.title,
-      type: r.type,
-      pricePerHour: r.pricePerHour,
-      pricePerDay: r.pricePerDay,
-      images: r.images,
-      location: r.location,
-      availableRanges: r.availableRanges,
-      description: r.description,
-      status: r.status,
+      id: ret._id.toString(),
+      ownerId: ret.ownerId.toString(),
+      title: ret.title,
+      type: ret.type,
+      pricePerHour: ret.pricePerHour,
+      pricePerDay: ret.pricePerDay,
+      images: ret.images,
+      location: ret.location,
+      availableRanges: ret.availableRanges,
+      description: ret.description,
+      status: ret.status,
       createdAt: ret.createdAt,
       updatedAt: ret.updatedAt,
     };

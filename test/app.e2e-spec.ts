@@ -17,7 +17,6 @@ describe('AppController (e2e)', () => {
   });
 
   it('/ (GET)', () => {
-    // eslint-disable-next-line prettier/prettier
     return request.default(app.getHttpServer()).get('/').expect(200).expect('Hello World!');
   });
 });
