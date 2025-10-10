@@ -13,17 +13,22 @@ async function bootstrap() {
 
   configureCloudinary(configService);
 
-  // Enable CORS
+  // Enable CORS with multiple origins
+  const corsOrigin = configService.get<string>('CORS_ORIGIN');
+
   app.enableCors({
-    origin: (configService.get<string>('CORS_ORIGIN') || '*').split(','),
+    origin: corsOrigin ? corsOrigin.split(',').map((origin) => origin.trim()) : '*',
   });
 
-  // Global validation
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // strip unknown properties
-      forbidNonWhitelisted: true, // throw if unknown properties
-      transform: true, // auto-transform payloads
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: false,
+        exposeDefaultValues: true,
+      },
+      whitelist: false, // CHANGED: Disabled to allow nested properties from JSON.parse
+      forbidNonWhitelisted: false,
     }),
   );
 

@@ -16,6 +16,7 @@ interface UserDocument {
   password: string;
   avatarUrl?: string;
   bio?: string;
+  role?: string;
   createdAt?: Date;
   updatedAt?: Date;
   __v?: number;
@@ -36,6 +37,7 @@ export class AuthService {
     email: string;
     avatarUrl: string;
     bio: string;
+    role?: string;
   } {
     return {
       id: user.id || user._id.toString(),
@@ -43,6 +45,7 @@ export class AuthService {
       email: user.email,
       avatarUrl: user.avatarUrl || '',
       bio: user.bio || '',
+      role: user.role,
     };
   }
 
@@ -54,11 +57,41 @@ export class AuthService {
     });
   }
 
-  async register(data: { name: string; email: string; password: string }) {
+  private signAccessToken(user: UserDocument): string {
+    return this.jwt.sign(
+      {
+        sub: user.id || user._id.toString(),
+        email: user.email,
+        name: user.name,
+      },
+      {
+        secret: process.env.JWT_ACCESS_SECRET,
+        expiresIn: process.env.JWT_ACCESS_TTL || '900s', // 15 mins default
+      },
+    );
+  }
+
+  private signRefreshToken(user: UserDocument): string {
+    return this.jwt.sign(
+      {
+        sub: user.id || user._id.toString(),
+        email: user.email,
+        name: user.name,
+      },
+      {
+        secret: process.env.JWT_REFRESH_SECRET,
+        expiresIn: process.env.JWT_REFRESH_TTL || '7d', // 7 days default
+      },
+    );
+  }
+
+  async register(data: { name: string; email: string; password: string; role: string }) {
     const created = (await this.users.createUser(data)) as UserDocument;
+
     return {
       user: this.toPublicUser(created),
-      token: this.sign(created),
+      accessToken: this.signAccessToken(created),
+      refreshToken: this.signRefreshToken(created),
     };
   }
 
@@ -71,8 +104,36 @@ export class AuthService {
 
     return {
       user: this.toPublicUser(user),
-      token: this.sign(user),
+      accessToken: this.signAccessToken(user),
+      refreshToken: this.signRefreshToken(user),
     };
+  }
+
+  async refreshTokens(refreshToken: string) {
+    try {
+      const payload = this.jwt.verify<{ email?: unknown }>(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
+
+      if (!payload || typeof payload.email !== 'string') {
+        throw new UnauthorizedException('Invalid refresh token payload');
+      }
+
+      const user = await this.users.findByEmail(payload.email);
+      if (!user) throw new UnauthorizedException('User not found');
+
+      const newAccessToken = this.signAccessToken(user);
+      const newRefreshToken = this.signRefreshToken(user);
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        user: this.toPublicUser(user),
+      };
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : typeof e === 'string' ? e : undefined;
+      throw new UnauthorizedException(message || 'Invalid or expired refresh token');
+    }
   }
 
   async requestPasswordReset(email: string) {
@@ -110,6 +171,6 @@ export class AuthService {
     const hashed = await bcrypt.hash(newPassword, 12);
     await this.users.updateUser(data.userId, { password: hashed });
 
-    this.resetTokens.delete(token); // invalidate token
+    this.resetTokens.delete(token);
   }
 }
