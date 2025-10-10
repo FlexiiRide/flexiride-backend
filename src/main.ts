@@ -18,12 +18,15 @@ async function bootstrap() {
     origin: (configService.get<string>('CORS_ORIGIN') || '*').split(','),
   });
 
-  // Global validation
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // strip unknown properties
-      forbidNonWhitelisted: true, // throw if unknown properties
-      transform: true, // auto-transform payloads
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: false,
+        exposeDefaultValues: true,
+      },
+      whitelist: false, // CHANGED: Disabled to allow nested properties from JSON.parse
+      forbidNonWhitelisted: false,
     }),
   );
 

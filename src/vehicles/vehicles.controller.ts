@@ -77,42 +77,10 @@ export class VehiclesController {
     @UploadedFiles() files: Express.Multer.File[],
     @Req() req: AuthenticatedRequest,
   ) {
-    // Parse JSON strings from multipart form data
-    const parsedData: CreateVehicleDto = {
-      ...data,
-      location:
-        typeof data.location === 'string'
-          ? (JSON.parse(data.location) as CreateVehicleDto['location'])
-          : data.location,
-      availableRanges:
-        typeof data.availableRanges === 'string'
-          ? (JSON.parse(data.availableRanges) as CreateVehicleDto['availableRanges'])
-          : data.availableRanges,
-    };
-
     const imagePaths = files?.map((f) => f.path) || [];
     const ownerId = req.user.userId;
 
-    return this.vehiclesService.createVehicle(ownerId, parsedData, imagePaths);
-  }
-
-  @Get()
-  @ApiOperation({ summary: 'Get all vehicles with optional filters' })
-  @ApiQuery({ name: 'ownerId', required: false, type: String })
-  @ApiQuery({ name: 'type', required: false, enum: ['car', 'bike'] })
-  @ApiQuery({ name: 'status', required: false, enum: ['active', 'inactive'] })
-  async getAllVehicles(
-    @Query('ownerId') ownerId?: string,
-    @Query('type') type?: 'car' | 'bike',
-    @Query('status') status?: 'active' | 'inactive',
-  ) {
-    return this.vehiclesService.getAllVehicles({ ownerId, type, status });
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get vehicle by ID' })
-  async getVehicleById(@Param('id') id: string) {
-    return this.vehiclesService.getVehicleById(id);
+    return this.vehiclesService.createVehicle(ownerId, data, imagePaths);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -146,24 +114,29 @@ export class VehiclesController {
     @UploadedFiles() files: Express.Multer.File[],
     @Req() req: AuthenticatedRequest,
   ) {
-    // Parse JSON strings from multipart form data if they exist
-    const parsedData: UpdateVehicleDto = {
-      ...data,
-    };
-
-    if (data.location && typeof data.location === 'string') {
-      parsedData.location = JSON.parse(data.location) as UpdateVehicleDto['location'];
-    }
-    if (data.availableRanges && typeof data.availableRanges === 'string') {
-      parsedData.availableRanges = JSON.parse(
-        data.availableRanges,
-      ) as UpdateVehicleDto['availableRanges'];
-    }
-
     const imagePaths = files?.map((f) => f.path) || [];
     const ownerId = req.user.userId;
 
-    return this.vehiclesService.updateVehicle(id, ownerId, parsedData, imagePaths);
+    return this.vehiclesService.updateVehicle(id, ownerId, data, imagePaths);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all vehicles with optional filters' })
+  @ApiQuery({ name: 'ownerId', required: false, type: String })
+  @ApiQuery({ name: 'type', required: false, enum: ['car', 'bike'] })
+  @ApiQuery({ name: 'status', required: false, enum: ['active', 'inactive'] })
+  async getAllVehicles(
+    @Query('ownerId') ownerId?: string,
+    @Query('type') type?: 'car' | 'bike',
+    @Query('status') status?: 'active' | 'inactive',
+  ) {
+    return this.vehiclesService.getAllVehicles({ ownerId, type, status });
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get vehicle by ID' })
+  async getVehicleById(@Param('id') id: string) {
+    return this.vehiclesService.getVehicleById(id);
   }
 
   @UseGuards(JwtAuthGuard)

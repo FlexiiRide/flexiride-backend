@@ -12,6 +12,12 @@ interface VehicleQuery {
   status?: 'active' | 'inactive';
 }
 
+interface ParsedLocation {
+  address: string;
+  lat?: number;
+  lng?: number;
+}
+
 @Injectable()
 export class VehiclesService {
   constructor(@InjectModel(Vehicle.name) private vehicleModel: Model<VehicleDocument>) {}
@@ -21,13 +27,45 @@ export class VehiclesService {
     data: CreateVehicleDto,
     images: string[],
   ): Promise<IVehicle> {
+    // Safety check: ensure location is an object with proper types
+    let location: ParsedLocation = data.location;
+    if (typeof data.location === 'string') {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(data.location);
+      } catch {
+        throw new Error('Invalid location format');
+      }
+      if (typeof parsed !== 'object' || parsed === null) {
+        throw new Error('Invalid location format');
+      }
+      const parsedObj = parsed as Record<string, unknown>;
+      if (typeof parsedObj.address !== 'string') {
+        throw new Error('Invalid location format: missing address');
+      }
+      const latVal = parsedObj.lat;
+      const lngVal = parsedObj.lng;
+      location = {
+        address: parsedObj.address,
+        lat: latVal !== undefined && latVal !== null ? Number(latVal as any) : undefined,
+        lng: lngVal !== undefined && lngVal !== null ? Number(lngVal as any) : undefined,
+      };
+    }
+
+    // Ensure lat/lng are numbers
+    const finalLocation = {
+      address: location.address,
+      lat: Number(location.lat),
+      lng: Number(location.lng),
+    };
+
     const created = await this.vehicleModel.create({
       ownerId: new Types.ObjectId(ownerId),
       title: data.title,
       type: data.type,
       pricePerHour: data.pricePerHour,
       pricePerDay: data.pricePerDay,
-      location: data.location,
+      location: finalLocation,
       availableRanges: data.availableRanges,
       description: data.description,
       images: images,
@@ -89,9 +127,11 @@ export class VehiclesService {
       throw new ForbiddenException('You do not own this vehicle');
     }
 
-    const updateData: Partial<Vehicle> = { ...data };
+    // Build type-safe updateData by excluding images from DTO
+    const { images: _, ...rest } = data; // eslint-disable-line @typescript-eslint/no-unused-vars
+    const updateData: Partial<Vehicle> = { ...rest };
 
-    // If new images are provided, append to existing
+    // Merge newImages safely
     if (newImages && newImages.length > 0) {
       updateData.images = [...vehicle.images, ...newImages];
     }
