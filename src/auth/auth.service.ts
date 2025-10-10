@@ -128,6 +128,7 @@ export class AuthService {
       return {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
+        user: this.toPublicUser(user),
       };
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : typeof e === 'string' ? e : undefined;
