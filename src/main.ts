@@ -13,9 +13,11 @@ async function bootstrap() {
 
   configureCloudinary(configService);
 
-  // Enable CORS
+  // Enable CORS with multiple origins
+  const corsOrigin = configService.get<string>('CORS_ORIGIN');
+
   app.enableCors({
-    origin: (configService.get<string>('CORS_ORIGIN') || '*').split(','),
+    origin: corsOrigin ? corsOrigin.split(',').map((origin) => origin.trim()) : '*',
   });
 
   app.useGlobalPipes(
