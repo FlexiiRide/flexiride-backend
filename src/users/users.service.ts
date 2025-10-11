@@ -1,6 +1,6 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, isValidObjectId } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from './schemas/user.schema';
 import { IUser } from './user.types';
@@ -40,8 +40,14 @@ export class UsersService {
   }
 
   async getPublicUserById(id: string) {
+    // Validate MongoDB ObjectId format
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
+    
     const user = await this.userModel.findById(id).exec();
     if (!user) throw new NotFoundException('User not found');
+    
     return {
       id: user._id.toString(),
       name: user.name,
@@ -56,7 +62,27 @@ export class UsersService {
     id: string,
     data: Partial<{ name: string; bio: string; avatarUrl: string; password: string }>,
   ): Promise<IUser> {
-    const updated = await this.userModel.findByIdAndUpdate(id, data, { new: true }).exec();
+    // Validate MongoDB ObjectId format
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
+
+    // Ensure email cannot be updated (security measure)
+    const sanitizedData = { ...data };
+    delete (sanitizedData as any).email;
+    delete (sanitizedData as any).role;
+
+    // Validate that at least one field is being updated
+    if (Object.keys(sanitizedData).length === 0) {
+      throw new BadRequestException('No valid fields provided for update');
+    }
+
+    const updated = await this.userModel.findByIdAndUpdate(
+      id, 
+      sanitizedData, 
+      { new: true, runValidators: true }
+    ).exec();
+    
     if (!updated) throw new NotFoundException('User not found');
     return this.toIUser(updated);
   }

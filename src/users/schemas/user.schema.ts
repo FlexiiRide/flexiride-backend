@@ -5,22 +5,48 @@ export type UserDocument = HydratedDocument<User>;
 
 @Schema({ timestamps: true })
 export class User {
-  @Prop({ required: true })
+  @Prop({ 
+    required: true,
+    trim: true,
+    minlength: [2, 'Name must be at least 2 characters long'],
+    maxlength: [50, 'Name cannot exceed 50 characters']
+  })
   name: string;
 
-  @Prop({ required: true, unique: true, index: true, lowercase: true, trim: true })
+  @Prop({ 
+    required: true, 
+    unique: true, 
+    index: true, 
+    lowercase: true, 
+    trim: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+  })
   email: string;
 
   @Prop({ required: true, select: false }) //avoid default return
   password: string;
 
-  @Prop({ default: '' })
+  @Prop({ 
+    default: '',
+    validate: {
+      validator: function(v: string) {
+        return !v || /^https?:\/\/.+/.test(v);
+      },
+      message: 'Avatar URL must be a valid URL'
+    }
+  })
   avatarUrl: string;
 
-  @Prop({ default: '' })
+  @Prop({ 
+    default: '',
+    maxlength: [250, 'Bio cannot exceed 250 characters']
+  })
   bio: string;
 
-  @Prop({ default: 'client' })
+  @Prop({ 
+    default: 'client',
+    enum: ['client', 'driver', 'admin']
+  })
   role: string;
 }
 
@@ -35,7 +61,8 @@ UserSchema.set('toJSON', {
       id: r._id.toString(),
       name: r.name,
       email: r.email,
-      password: r.password,
+      avatarUrl: r.avatarUrl,
+      bio: r.bio,
       role: r.role,
     };
   },
